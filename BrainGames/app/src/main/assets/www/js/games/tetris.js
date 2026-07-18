@@ -22,8 +22,8 @@
 
             for (var r = 0; r < ROWS; r++) { grid.push(new Array(COLS).fill(0)); }
 
-            var maxW = Math.min(host.clientWidth || 340, 340);
-            var cell = Math.floor(Math.min(maxW, 300) / COLS);
+            var sp = api.space();
+            var cell = Math.max(12, Math.floor(Math.min(sp.w / COLS, sp.h / ROWS, 34)));
             var W = cell * COLS, H = cell * ROWS;
 
             var best = api.getBest();

@@ -12,7 +12,7 @@
             var sRound = stat("Round", "0"), sBest = stat("Best", (api.getBest() || 0) + "");
             host.appendChild(api.el("div", { class: "game-topline" }, [sRound.box, sBest.box]));
 
-            var size = Math.min((host.clientWidth || 340) - 24, 320);
+            var size = Math.min(api.space().board, 360);
             var boardEl = api.el("div", { style: "position:relative;width:" + size + "px;height:" + size + "px;border-radius:50%;background:var(--card);display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:8px" });
             var pads = [];
             var rounds = ["30% 0 0 0", "0 30% 0 0", "0 0 0 30%", "0 0 30% 0"];

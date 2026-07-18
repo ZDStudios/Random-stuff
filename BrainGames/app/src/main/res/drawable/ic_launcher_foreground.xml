@@ -4,17 +4,20 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Stylized brain / joystick mark centered in the safe zone -->
+    <!-- Gamepad body (pill) -->
     <path
         android:fillColor="#7C5CFF"
-        android:pathData="M54,30 m-16,0 a16,16 0 1,0 32,0 a16,16 0 1,0 -32,0" />
+        android:pathData="M41,40 H67 a18,18 0 0 1 0,36 H41 a18,18 0 0 1 0,-36 Z" />
+    <!-- soft top highlight -->
     <path
-        android:fillColor="#22D3EE"
-        android:pathData="M46,44 h16 v22 a8,8 0 0,1 -8,8 a8,8 0 0,1 -8,-8 z" />
-    <path
-        android:fillColor="#F472B6"
-        android:pathData="M40,58 m-6,0 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0" />
-    <path
-        android:fillColor="#FBBF24"
-        android:pathData="M68,58 m-6,0 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0" />
+        android:fillColor="#9B82FF"
+        android:pathData="M41,40 H67 a18,18 0 0 1 17,12 H24 a18,18 0 0 1 17,-12 Z" />
+    <!-- D-pad (vertical + horizontal bars) -->
+    <path android:fillColor="#EEF2FF" android:pathData="M35,50 h6 v16 h-6 z" />
+    <path android:fillColor="#EEF2FF" android:pathData="M30,55 h16 v6 h-16 z" />
+    <!-- Action buttons -->
+    <path android:fillColor="#FBBF24" android:pathData="M69,50 m-3.6,0 a3.6,3.6 0 1,0 7.2,0 a3.6,3.6 0 1,0 -7.2,0" />
+    <path android:fillColor="#34D399" android:pathData="M69,66 m-3.6,0 a3.6,3.6 0 1,0 7.2,0 a3.6,3.6 0 1,0 -7.2,0" />
+    <path android:fillColor="#22D3EE" android:pathData="M62,58 m-3.6,0 a3.6,3.6 0 1,0 7.2,0 a3.6,3.6 0 1,0 -7.2,0" />
+    <path android:fillColor="#F472B6" android:pathData="M76,58 m-3.6,0 a3.6,3.6 0 1,0 7.2,0 a3.6,3.6 0 1,0 -7.2,0" />
 </vector>

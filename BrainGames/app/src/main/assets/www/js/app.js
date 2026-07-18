@@ -1,13 +1,16 @@
 /* ============================================================
    Brain Arcade — core framework
-   Registry, router, settings, sound, storage, UI helpers.
+   Registry, router, settings, sound, storage, UI helpers,
+   responsive sizing, animations, WiFi update + remote control.
    ============================================================ */
 (function () {
     "use strict";
 
+    var VERSION = "1.1.0";
     var GAMES = [];
     var current = null;      // { def, cleanup }
     var route = "home";      // 'home' | 'game' | 'settings'
+    var routeArg = null;
 
     /* ---------- storage ---------- */
     var LS = window.localStorage;
@@ -15,11 +18,15 @@
         try { var v = LS.getItem("ba_" + key); return v === null ? dflt : JSON.parse(v); }
         catch (e) { return dflt; }
     }
-    function save(key, val) {
-        try { LS.setItem("ba_" + key, JSON.stringify(val)); } catch (e) {}
-    }
+    function save(key, val) { try { LS.setItem("ba_" + key, JSON.stringify(val)); } catch (e) {} }
 
-    var settings = load("settings", { theme: "dark", sound: true, haptics: true });
+    var settings = load("settings", { theme: "dark", sound: true, haptics: true, serverUrl: "", deviceName: "" });
+    if (settings.serverUrl == null) settings.serverUrl = "";
+    if (settings.deviceName == null) settings.deviceName = "";
+
+    var deviceId = load("deviceId", null);
+    if (!deviceId) { deviceId = "dev_" + Math.random().toString(36).slice(2, 10); save("deviceId", deviceId); }
+
     function applyTheme() {
         document.documentElement.setAttribute("data-theme", settings.theme === "light" ? "light" : "dark");
         var meta = document.querySelector('meta[name="theme-color"]');
@@ -27,12 +34,28 @@
     }
     applyTheme();
 
+    /* ---------- responsive sizing ---------- */
+    function isTablet() { return Math.min(window.innerWidth, window.innerHeight) >= 600; }
+    function space() {
+        var view = document.getElementById("view");
+        // leave room for #view padding (28) + board-wrap padding/border (~28)
+        var pad = 56;
+        var w = Math.max(200, (view ? view.clientWidth : window.innerWidth) - pad);
+        var tab = isTablet();
+        // room for topbar + stat tiles + control buttons
+        var reserve = tab ? 300 : 250;
+        var h = Math.max(240, window.innerHeight - reserve);
+        var board = Math.min(w, h);
+        // let tablets use bigger boards but keep it comfortable
+        if (tab) board = Math.min(board, 560);
+        return { w: w, h: h, board: board, isTablet: tab, unit: tab ? 1.15 : 1 };
+    }
+    document.documentElement.classList.toggle("tablet", isTablet());
+
     /* ---------- sound engine (WebAudio blips) ---------- */
     var actx = null;
     function ac() {
-        if (!actx) {
-            try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { actx = null; }
-        }
+        if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { actx = null; } }
         if (actx && actx.state === "suspended") { try { actx.resume(); } catch (e) {} }
         return actx;
     }
@@ -41,8 +64,7 @@
         var c = ac(); if (!c) return;
         try {
             var o = c.createOscillator(), g = c.createGain();
-            o.type = type || "square";
-            o.frequency.value = freq;
+            o.type = type || "square"; o.frequency.value = freq;
             g.gain.value = (vol == null ? 0.06 : vol);
             o.connect(g); g.connect(c.destination);
             var t = c.currentTime;
@@ -61,7 +83,6 @@
         lose:  function () { [400,300,200].forEach(function (f, i) { setTimeout(function(){ tone(f, 0.16, "sawtooth", 0.06); }, i * 110); }); },
         pop:   function () { tone(740, 0.05, "sine", 0.05); }
     };
-
     function haptic(ms) {
         if (!settings.haptics) return;
         try {
@@ -89,17 +110,13 @@
         }
         return n;
     }
-
     var toastTimer = null;
     function toast(msg) {
         var t = document.getElementById("toast");
-        t.textContent = msg; t.hidden = false;
+        t.innerHTML = msg; t.hidden = false;
         requestAnimationFrame(function () { t.classList.add("show"); });
         clearTimeout(toastTimer);
-        toastTimer = setTimeout(function () {
-            t.classList.remove("show");
-            setTimeout(function () { t.hidden = true; }, 250);
-        }, 1600);
+        toastTimer = setTimeout(function () { t.classList.remove("show"); setTimeout(function () { t.hidden = true; }, 250); }, 1800);
     }
 
     /* ---------- best scores ---------- */
@@ -107,8 +124,7 @@
     function getBest(id) { return load(bestKey(id), null); }
     function setBest(id, value, mode) {
         var cur = getBest(id);
-        var better = cur == null ||
-            (mode === "low" ? value < cur : value > cur);
+        var better = cur == null || (mode === "low" ? value < cur : value > cur);
         if (better) { save(bestKey(id), value); return true; }
         return false;
     }
@@ -118,7 +134,6 @@
 
     /* ---------- overlay helper ---------- */
     function overlay(opts) {
-        var host = document.getElementById("view");
         var ov = el("div", { class: "overlay" });
         var panel = el("div", { class: "panel pop" });
         if (opts.emoji) panel.appendChild(el("div", { class: "big", text: opts.emoji }));
@@ -126,11 +141,8 @@
         if (opts.sub) panel.appendChild(el("p", { html: opts.sub }));
         var row = el("div", { class: "btn-row" });
         (opts.buttons || []).forEach(function (b) {
-            row.appendChild(el("button", {
-                class: "btn " + (b.primary ? "primary" : ""),
-                text: b.label,
-                onclick: function () { close(); if (b.onClick) b.onClick(); }
-            }));
+            row.appendChild(el("button", { class: "btn " + (b.primary ? "primary" : ""), text: b.label,
+                onclick: function () { close(); if (b.onClick) b.onClick(); } }));
         });
         panel.appendChild(row);
         ov.appendChild(panel);
@@ -139,18 +151,13 @@
         ov._close = close;
         return ov;
     }
-    function clearOverlays() {
-        document.querySelectorAll(".overlay").forEach(function (o) { if (o.parentNode) o.parentNode.removeChild(o); });
-    }
+    function clearOverlays() { document.querySelectorAll(".overlay").forEach(function (o) { if (o.parentNode) o.parentNode.removeChild(o); }); }
 
     /* ---------- api passed to games ---------- */
     function makeApi(def) {
         return {
-            el: el,
-            sound: Sound,
-            haptic: haptic,
-            toast: toast,
-            overlay: overlay,
+            el: el, sound: Sound, haptic: haptic, toast: toast, overlay: overlay,
+            space: space, isTablet: isTablet,
             getBest: function () { return getBest(def.id); },
             setBest: function (v) { return setBest(def.id, v, def.best || "high"); },
             save: function (k, v) { save(def.id + "_" + k, v); },
@@ -160,27 +167,82 @@
         };
     }
 
+    /* ---------- remote control policy ---------- */
+    var policy = { locked: false, allowedGames: null }; // allowedGames null = all
+    function allowed(id) { return !policy.allowedGames || policy.allowedGames.indexOf(id) > -1; }
+    function serverUrl() { return (settings.serverUrl || "").replace(/\/+$/, ""); }
+    function online() {
+        try { if (window.AndroidBridge && typeof window.AndroidBridge.isOnline === "function") return !!window.AndroidBridge.isOnline(); } catch (e) {}
+        return navigator.onLine !== false;
+    }
+    var pollTimer = null;
+    function schedulePoll(ms) { clearTimeout(pollTimer); pollTimer = setTimeout(poll, ms || 15000); }
+    function poll() {
+        if (!serverUrl()) { setDot("off"); return schedulePoll(30000); }
+        if (!online()) { setDot("offline"); return schedulePoll(12000); }
+        var ctrl = "timeout" in AbortSignal ? AbortSignal.timeout(8000) : undefined;
+        fetch(serverUrl() + "/api/heartbeat", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ deviceId: deviceId, name: settings.deviceName || "Tablet", app: VERSION }),
+            signal: ctrl
+        }).then(function (r) { return r.json(); }).then(function (data) {
+            setDot("online");
+            applyPolicy(data || {});
+        }).catch(function () { setDot("offline"); }).finally(function () { schedulePoll(15000); });
+    }
+    function applyPolicy(data) {
+        var newLocked = !!data.locked;
+        var newAllowed = Array.isArray(data.allowedGames) ? data.allowedGames.slice() : null;
+        var changed = newLocked !== policy.locked || JSON.stringify(newAllowed) !== JSON.stringify(policy.allowedGames);
+        policy.locked = newLocked; policy.allowedGames = newAllowed;
+        if (!changed) return;
+        renderLock();
+        if (route === "home") renderHome();
+        if (route === "game" && routeArg && !allowed(routeArg.id)) { toast("This game was disabled by the admin"); go("home"); }
+    }
+    function renderLock() {
+        var existing = document.getElementById("lockScreen");
+        if (policy.locked) {
+            if (existing) return;
+            var ls = el("div", { id: "lockScreen", class: "lock-screen fade-in" }, [
+                el("div", { class: "lock-inner" }, [
+                    el("div", { class: "lock-ico", html: "&#128274;" }),
+                    el("h2", { text: "Locked" }),
+                    el("p", { text: "This tablet has been locked by the administrator." })
+                ])
+            ]);
+            document.body.appendChild(ls);
+        } else if (existing) { existing.remove(); }
+    }
+    var statusDot = null;
+    function setDot(state) {
+        if (!statusDot) return;
+        statusDot.className = "status-dot " + state;
+        statusDot.title = state === "online" ? "Connected to control server" : state === "offline" ? "Offline — games still work" : "";
+        statusDot.style.display = (state === "off") ? "none" : "inline-block";
+    }
+
     /* ---------- rendering ---------- */
     var view = null;
     function setView() { view = document.getElementById("view"); }
+    function animateView() { view.classList.remove("view-enter"); void view.offsetWidth; view.classList.add("view-enter"); }
 
     function renderHome() {
-        route = "home"; current = null;
+        route = "home"; routeArg = null; current = null;
         document.getElementById("backBtn").hidden = true;
         view.innerHTML = "";
+        var list = GAMES.filter(function (g) { return allowed(g.id); });
         var hero = el("div", { class: "hero fade-in" }, [
             el("h1", { text: "Play. Think. Repeat." }),
-            el("p", { text: GAMES.length + " brain-teasing games in one arcade. Beat your best scores!" })
+            el("p", { text: list.length + " brain-teasing games in one arcade. Beat your best scores!" })
         ]);
         view.appendChild(hero);
         view.appendChild(el("div", { class: "section-label", text: "All Games" }));
-
         var grid = el("div", { class: "grid" });
-        GAMES.forEach(function (def) {
+        list.forEach(function (def, i) {
             var best = getBest(def.id);
-            var bestStr = best == null ? "Tap to play" :
-                (def.bestLabel || "Best") + ": " + best + (def.bestSuffix || "");
-            var card = el("div", { class: "game-card fade-in", style: "background:" + (def.gradient || "linear-gradient(135deg,#7C5CFF,#22D3EE)") }, [
+            var bestStr = best == null ? "Tap to play" : (def.bestLabel || "Best") + ": " + best + (def.bestSuffix || "");
+            var card = el("div", { class: "game-card card-enter", style: "background:" + (def.gradient || "linear-gradient(135deg,#7C5CFF,#22D3EE)") + ";animation-delay:" + (i * 35) + "ms" }, [
                 el("div", { class: "art", style: def.art || "" }),
                 el("div", { class: "glass" }),
                 el("div", { class: "ico", html: def.icon || "&#127918;" }),
@@ -193,42 +255,39 @@
             grid.appendChild(card);
         });
         view.appendChild(grid);
-        view.appendChild(el("div", { class: "small-note", html: "Made with &#128150; — everything runs offline on your device." }));
-        window.scrollTo(0, 0);
+        if (!list.length) view.appendChild(el("div", { class: "small-note", text: "No games are currently enabled." }));
+        else view.appendChild(el("div", { class: "small-note", html: "Made with &#128150; — everything runs offline on your device." }));
+        animateView(); window.scrollTo(0, 0);
     }
 
     function openGame(def) {
-        route = "game";
+        if (policy.locked) return;
+        if (!allowed(def.id)) { toast("This game is disabled"); return; }
+        route = "game"; routeArg = def;
         clearOverlays();
         document.getElementById("backBtn").hidden = false;
         view.innerHTML = "";
-        var host = el("div", { class: "game-host fade-in" });
+        var host = el("div", { class: "game-host" });
         view.appendChild(host);
         var api = makeApi(def);
         var cleanup = null;
         try { cleanup = def.mount(host, api); } catch (e) { toast("Game failed to load"); console.error(e); }
         current = { def: def, cleanup: typeof cleanup === "function" ? cleanup : null };
-        window.scrollTo(0, 0);
+        animateView(); window.scrollTo(0, 0);
     }
 
     function renderSettings() {
-        route = "settings";
+        route = "settings"; routeArg = null;
         clearOverlays();
         document.getElementById("backBtn").hidden = false;
         view.innerHTML = "";
-        var wrap = el("div", { class: "fade-in" });
+        var wrap = el("div");
         wrap.appendChild(el("div", { class: "section-label", text: "Appearance" }));
-
         var g1 = el("div", { class: "settings-group" });
-        // Theme segmented
-        var themeRow = el("div", { class: "setting-row" }, [
+        g1.appendChild(el("div", { class: "setting-row" }, [
             el("div", { class: "s-ico", html: "&#127912;" }),
-            el("div", { class: "s-text" }, [
-                el("div", { class: "s-title", text: "Theme" }),
-                el("div", { class: "s-sub", text: "Choose light or dark mode" })
-            ])
-        ]);
-        g1.appendChild(themeRow);
+            el("div", { class: "s-text" }, [ el("div", { class: "s-title", text: "Theme" }), el("div", { class: "s-sub", text: "Choose light or dark mode" }) ])
+        ]));
         var seg = el("div", { class: "seg", style: "margin:0 16px 15px" });
         ["dark", "light"].forEach(function (mode) {
             var b = el("button", { class: settings.theme === mode ? "active" : "", text: mode === "dark" ? "Dark" : "Light" });
@@ -248,59 +307,67 @@
         g2.appendChild(toggleRow("&#128243;", "Haptics", "Vibrate on key moments", "haptics"));
         wrap.appendChild(g2);
 
+        wrap.appendChild(el("div", { class: "section-label", text: "Device & Control" }));
+        var g4 = el("div", { class: "settings-group" });
+        g4.appendChild(textRow("&#127991;", "Device name", "Shown on the control dashboard", "deviceName", "Tablet"));
+        g4.appendChild(textRow("&#127760;", "Control server URL", "Leave blank to disable remote control", "serverUrl", "https://your-app.onrender.com"));
+        g4.appendChild(el("div", { class: "setting-row" }, [
+            el("div", { class: "s-ico", html: "&#8635;" }),
+            el("div", { class: "s-text" }, [ el("div", { class: "s-title", text: "Check for updates" }), el("div", { class: "s-sub", text: "Download the latest games over WiFi" }) ]),
+            el("button", { class: "btn", text: "Check", onclick: function () {
+                Sound.click();
+                try { if (window.AndroidBridge && window.AndroidBridge.checkUpdate) { window.AndroidBridge.checkUpdate(); toast("Checking for updates…"); return; } } catch (e) {}
+                toast("Updates run inside the app on WiFi");
+            } })
+        ]));
+        wrap.appendChild(g4);
+
         wrap.appendChild(el("div", { class: "section-label", text: "Data" }));
         var g3 = el("div", { class: "settings-group" });
-        var resetRow = el("div", { class: "setting-row" }, [
+        g3.appendChild(el("div", { class: "setting-row" }, [
             el("div", { class: "s-ico", html: "&#128465;" }),
-            el("div", { class: "s-text" }, [
-                el("div", { class: "s-title", text: "Reset high scores" }),
-                el("div", { class: "s-sub", text: "Clear every saved best score" })
-            ]),
+            el("div", { class: "s-text" }, [ el("div", { class: "s-title", text: "Reset high scores" }), el("div", { class: "s-sub", text: "Clear every saved best score" }) ]),
             el("button", { class: "btn", text: "Reset", onclick: function () {
-                overlay({
-                    emoji: "&#9888;&#65039;", title: "Reset all scores?",
-                    sub: "This can't be undone.",
-                    buttons: [
-                        { label: "Cancel" },
-                        { label: "Reset", primary: true, onClick: function () {
-                            GAMES.forEach(function (d) { try { LS.removeItem("ba_" + bestKey(d.id)); } catch (e) {} });
-                            toast("High scores cleared"); Sound.good();
-                        } }
-                    ]
-                });
+                overlay({ emoji: "&#9888;&#65039;", title: "Reset all scores?", sub: "This can't be undone.",
+                    buttons: [ { label: "Cancel" }, { label: "Reset", primary: true, onClick: function () {
+                        GAMES.forEach(function (d) { try { LS.removeItem("ba_" + bestKey(d.id)); } catch (e) {} });
+                        toast("High scores cleared"); Sound.good();
+                    } } ] });
             } })
-        ]);
-        g3.appendChild(resetRow);
+        ]));
         wrap.appendChild(g3);
-
-        wrap.appendChild(el("div", { class: "small-note", html: "Brain Arcade v1.0 &#183; " + GAMES.length + " games &#183; Offline &amp; private" }));
+        wrap.appendChild(el("div", { class: "small-note", html: "Brain Arcade v" + VERSION + " &#183; " + GAMES.length + " games &#183; Offline &amp; private" }));
         view.appendChild(wrap);
-        window.scrollTo(0, 0);
+        animateView(); window.scrollTo(0, 0);
+        poll();
     }
-
     function toggleRow(icon, title, sub, key) {
         var input = el("input", { type: "checkbox" });
         input.checked = !!settings[key];
-        input.addEventListener("change", function () {
-            settings[key] = input.checked; save("settings", settings);
-            if (settings[key]) { Sound.click(); haptic(10); }
-        });
+        input.addEventListener("change", function () { settings[key] = input.checked; save("settings", settings); if (settings[key]) { Sound.click(); haptic(10); } });
         var sw = el("label", { class: "switch" }, [input, el("span", { class: "track" }), el("span", { class: "thumb" })]);
         return el("div", { class: "setting-row" }, [
             el("div", { class: "s-ico", html: icon }),
-            el("div", { class: "s-text" }, [
-                el("div", { class: "s-title", text: title }),
-                el("div", { class: "s-sub", text: sub })
-            ]),
+            el("div", { class: "s-text" }, [ el("div", { class: "s-title", text: title }), el("div", { class: "s-sub", text: sub }) ]),
             sw
+        ]);
+    }
+    function textRow(icon, title, sub, key, placeholder) {
+        var input = el("input", { type: "text", class: "text-input", value: settings[key] || "", placeholder: placeholder || "" });
+        input.addEventListener("change", function () { settings[key] = input.value.trim(); save("settings", settings); Sound.click(); if (key === "serverUrl") poll(); });
+        return el("div", { class: "setting-row col" }, [
+            el("div", { class: "row-head" }, [
+                el("div", { class: "s-ico", html: icon }),
+                el("div", { class: "s-text" }, [ el("div", { class: "s-title", text: title }), el("div", { class: "s-sub", text: sub }) ])
+            ]),
+            input
         ]);
     }
 
     /* ---------- router ---------- */
     function teardown() {
         if (current && current.cleanup) { try { current.cleanup(); } catch (e) {} }
-        current = null;
-        clearOverlays();
+        current = null; clearOverlays();
     }
     function go(where, arg) {
         teardown();
@@ -308,33 +375,53 @@
         else if (where === "settings") renderSettings();
         else if (where === "game" && arg) openGame(arg);
     }
-
     function handleBack() {
-        // Return true if handled (don't exit app), false to allow exit.
+        if (policy.locked) return true;
         if (document.querySelector(".overlay")) { clearOverlays(); return true; }
         if (route === "game" || route === "settings") { Sound.click(); go("home"); return true; }
         return false;
     }
 
+    /* ---------- orientation / resize re-mount ---------- */
+    var lastW = window.innerWidth, lastH = window.innerHeight, resizeTimer = null;
+    function onResize() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function () {
+            document.documentElement.classList.toggle("tablet", isTablet());
+            var dw = Math.abs(window.innerWidth - lastW), dh = Math.abs(window.innerHeight - lastH);
+            lastW = window.innerWidth; lastH = window.innerHeight;
+            if (dw < 40 && dh < 40) return;
+            if (route === "game" && current && current.def) { var def = current.def; teardown(); openGame(def); }
+        }, 220);
+    }
+    window.addEventListener("resize", onResize);
+    window.addEventListener("orientationchange", function () { lastW = -999; onResize(); });
+
+    /* ---------- update hook (called from native) ---------- */
+    function onUpdate(version) { toast("&#10024; Updated to v" + version + " — enjoy the new games!"); Sound.good(); }
+
     /* ---------- boot ---------- */
     function boot() {
         setView();
+        // status dot in brand
+        var brand = document.getElementById("title");
+        statusDot = el("span", { class: "status-dot off", style: "display:none" });
+        brand.appendChild(statusDot);
         document.getElementById("backBtn").addEventListener("click", function () { Sound.click(); haptic(10); go("home"); });
         document.getElementById("settingsBtn").addEventListener("click", function () { Sound.click(); haptic(10); route === "settings" ? go("home") : go("settings"); });
-        document.getElementById("title").addEventListener("click", function () { if (route !== "home") go("home"); });
-        // unlock audio on first touch
+        brand.addEventListener("click", function () { if (route !== "home") go("home"); });
         var unlock = function () { ac(); window.removeEventListener("touchstart", unlock); window.removeEventListener("mousedown", unlock); };
         window.addEventListener("touchstart", unlock);
         window.addEventListener("mousedown", unlock);
+        window.addEventListener("online", function () { setDot("online"); poll(); });
+        window.addEventListener("offline", function () { setDot("offline"); });
         renderHome();
+        renderLock();
+        schedulePoll(1500);
     }
 
-    /* ---------- public ---------- */
     window.BrainGames = {
-        register: register,
-        boot: boot,
-        handleBack: handleBack,
-        toast: toast,
-        go: go
+        register: register, boot: boot, handleBack: handleBack, toast: toast, go: go,
+        onUpdate: onUpdate, version: VERSION
     };
 })();

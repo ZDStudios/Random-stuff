@@ -6,8 +6,7 @@
         best: "high",
         mount: function (host, api) {
             var N = 17;
-            var maxW = Math.min((host.clientWidth || 340) - 24, 340);
-            var cell = Math.floor(maxW / N), W = cell * N, H = cell * N;
+            var cell = Math.floor(api.space().board / N), W = cell * N, H = cell * N;
             var snake, dir, nextDir, food, score, over, raf, acc = 0, last = 0, stepMs;
 
             var sScore = stat("Score", "0"), sBest = stat("Best", (api.getBest() || 0) + "");

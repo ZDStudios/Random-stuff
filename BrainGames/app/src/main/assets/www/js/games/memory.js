@@ -10,7 +10,7 @@
 
             var sMoves = stat("Moves", "0"), sTime = stat("Time", "0s"), sBest = stat("Best", (api.getBest() || "—") + "");
             host.appendChild(api.el("div", { class: "game-topline" }, [sMoves.box, sTime.box, sBest.box]));
-            var grid = api.el("div", { style: "display:grid;grid-template-columns:repeat(4,1fr);gap:10px;max-width:340px;width:100%" });
+            var grid = api.el("div", { style: "display:grid;grid-template-columns:repeat(4,1fr);gap:10px;max-width:" + Math.min(api.space().board, 380) + "px;width:100%" });
             host.appendChild(api.el("div", { class: "board-wrap" }, grid));
             host.appendChild(api.el("div", { class: "small-note", text: "Flip two cards to find matching pairs." }));
             host.appendChild(api.el("div", { class: "btn-row" }, [ api.el("button", { class: "btn", text: "New game", onclick: reset }) ]));

@@ -1,14 +1,17 @@
 # 🧠 Brain Arcade
 
-A polished offline Android app packing **17 brain-teasing games** into one arcade —
-Tetris, Block Blast, Wordle, 2048 and more — with a nice UI, dark/light themes,
-sound, haptics, and per-game high scores. Everything runs locally on the device;
-no network, no ads, no tracking.
+A polished Android app packing **23 brain-teasing games** into one arcade —
+Chess, Tetris, Solitaire, Rush Hour, Wordle, 2048 and more — with a nice animated
+UI, dark/light themes, sound, haptics, per-game high scores, tablet-aware scaling
+and full screen-rotation support. **Games run fully offline**; the only time the
+network is used is optional WiFi auto-updates and the optional remote dashboard.
 
-## 🎮 Games included
+## 🎮 Games included (23)
 
 | | | |
 |---|---|---|
+| ♟️ Chess (AI) | 🃏 Solitaire | 🚗 Rush Hour |
+| ⚫ Reversi (AI) | ➕ Math Blitz | 🌈 Color Clash |
 | 🧩 Tetris | 🟧 Block Blast | 🎲 2048 |
 | 📝 Wordle | 🐍 Snake | 🃏 Memory Match |
 | 💣 Minesweeper | 🔢 Sudoku | 🔮 Simon Says |
@@ -16,8 +19,27 @@ no network, no ads, no tracking.
 | 🐺 Whack-a-Mole | 🔀 15 Puzzle | 🐦 Flappy Bird |
 | 🏓 Pong (AI) | ⚡ Reaction Time | |
 
-Each game tracks a personal best that's saved on the device. There's a Settings
-screen for theme, sound effects, haptics, and resetting scores.
+Chess, Reversi, Tic-Tac-Toe and Connect Four have real AI opponents. Fast-thinking
+games (Math Blitz, Color Clash, Reaction Time) and strategy/puzzle games (Chess,
+Reversi, Rush Hour, Solitaire) round out the mix. Each game tracks a personal best
+saved on the device.
+
+## ✨ Features
+
+- **Rotation & tablets** — plays in portrait or landscape; boards scale to fit
+  phones and tablets, with bigger controls and text on large screens.
+- **Animations** — staggered card entrances, view transitions, shimmering cards,
+  celebratory pop-ins.
+- **Settings** — light/dark theme, sound effects, haptics, device name, control
+  server URL, manual update check, reset scores.
+- **WiFi auto-updates** — on WiFi the app checks the
+  [`Brain-ARCADE`](https://github.com/ZDStudios/Brain-ARCADE) repo and downloads new
+  games automatically. Offline, it uses the copy bundled in the APK — so it always
+  works with no connection.
+- **Optional remote control** — point the app at a control server (see
+  [`control-server/`](../control-server)) to see the tablet online, lock it, or
+  limit it to certain games. With no server URL set, none of this runs and the app
+  is 100% local.
 
 ## 📱 How to get the APK
 
@@ -66,5 +88,8 @@ Adding a game is just dropping a new `js/games/xyz.js` that calls
 
 ## 🔐 Privacy
 
-100% offline. No internet permission is requested. Scores and settings are stored
-only in the device's local storage.
+All gameplay is local — scores and settings live only in the device's storage, and
+every game works with no connection. The app uses the internet permission for just
+two optional things: checking the `Brain-ARCADE` repo for game updates on WiFi, and
+(only if you set a control-server URL) sending a heartbeat so the dashboard can show
+the tablet and apply lock/allow policies. No ads, no analytics, no third parties.

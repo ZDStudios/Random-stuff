@@ -5,7 +5,7 @@
         gradient: "linear-gradient(135deg,#334155,#0EA5E9)",
         best: "high", bestLabel: "Wins",
         mount: function (host, api) {
-            var W = Math.min((host.clientWidth || 340) - 24, 340), H = Math.round(W * 1.35);
+            var sp = api.space(), W = Math.round(Math.min(sp.w, sp.h / 1.35, 420)), H = Math.round(W * 1.35);
             var ball, pw, ph, player, ai, pScore, aiScore, raf, running, wins = api.load("wins", 0), roundOver;
 
             var sYou = stat("You", "0"), sCpu = stat("CPU", "0"), sBest = stat("Best", (api.getBest() || 0) + "");

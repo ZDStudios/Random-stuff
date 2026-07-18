@@ -9,7 +9,7 @@
 
             var sDiff = stat("Level", "Medium"), sTime = stat("Time", "0s"), sBest = stat("Best", (api.getBest() || "—") + "");
             host.appendChild(api.el("div", { class: "game-topline" }, [sDiff.box, sTime.box, sBest.box]));
-            var size = Math.min((host.clientWidth || 340) - 24, 342);
+            var size = Math.min(api.space().board, 468);
             var cellPx = Math.floor(size / 9);
             var boardEl = api.el("div", { style: "display:grid;grid-template-columns:repeat(9," + cellPx + "px);gap:0;background:var(--text);padding:2px;border-radius:8px" });
             host.appendChild(api.el("div", { class: "board-wrap" }, boardEl));

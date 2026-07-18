@@ -10,7 +10,7 @@
             var sLast = stat("Last", "—"), sAvg = stat("Avg", "—"), sBest = stat("Best", (api.getBest() || "—") + "");
             host.appendChild(api.el("div", { class: "game-topline" }, [sLast.box, sAvg.box, sBest.box]));
 
-            var size = Math.min((host.clientWidth || 340) - 24, 340);
+            var size = Math.round(Math.min(api.space().w, api.space().h / 1.1, 380));
             var pad = api.el("div", { style: "width:100%;max-width:" + size + "px;height:" + Math.round(size * 1.1) + "px;border-radius:20px;display:grid;place-items:center;text-align:center;padding:20px;font-weight:800;cursor:pointer;user-select:none;transition:background .1s", html: "" });
             host.appendChild(api.el("div", { class: "board-wrap" }, pad));
             host.appendChild(api.el("div", { class: "small-note", text: "When the box turns green, tap as fast as you can!" }));

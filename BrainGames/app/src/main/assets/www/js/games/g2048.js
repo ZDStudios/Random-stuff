@@ -10,7 +10,7 @@
 
             var sScore = stat("Score", "0"), sBest = stat("Best", (api.getBest() || 0) + "");
             host.appendChild(api.el("div", { class: "game-topline" }, [sScore.box, sBest.box]));
-            var size = Math.min((host.clientWidth || 340) - 24, 340);
+            var size = api.space().board;
             var gap = 10, cellPx = Math.floor((size - gap * (N + 1)) / N);
             var boardEl = api.el("div", { style: "position:relative;width:" + (cellPx * N + gap * (N + 1)) + "px;height:" + (cellPx * N + gap * (N + 1)) + "px;background:rgba(255,255,255,0.06);border-radius:12px" });
             host.appendChild(api.el("div", { class: "board-wrap" }, boardEl));

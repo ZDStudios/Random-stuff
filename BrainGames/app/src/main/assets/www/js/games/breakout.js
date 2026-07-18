@@ -5,7 +5,7 @@
         gradient: "linear-gradient(135deg,#7C3AED,#2563EB)",
         best: "high",
         mount: function (host, api) {
-            var W = Math.min((host.clientWidth || 340) - 24, 340), H = Math.round(W * 1.25);
+            var sp = api.space(), W = Math.round(Math.min(sp.w, sp.h / 1.25, 420)), H = Math.round(W * 1.25);
             var score, lives, level, bricks, ball, paddle, raf, running, over;
             var COLS = 7, ROWS = 5, bw, bh = 18, pad;
 

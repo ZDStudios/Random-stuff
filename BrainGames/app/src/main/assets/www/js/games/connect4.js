@@ -9,7 +9,8 @@
 
             var sScore = stat("Wins", wins + ""), sBest = stat("Best", (api.getBest() || 0) + "");
             host.appendChild(api.el("div", { class: "game-topline" }, [sScore.box, sBest.box]));
-            var cellPx = Math.floor(Math.min((host.clientWidth || 340) - 24, 336) / COLS);
+            var sp = api.space();
+            var cellPx = Math.floor(Math.min(sp.w / COLS, sp.h / ROWS, 54));
             var boardEl = api.el("div", { style: "display:grid;grid-template-columns:repeat(" + COLS + ",1fr);gap:5px;background:#1E3A8A;padding:8px;border-radius:12px" });
             host.appendChild(api.el("div", { class: "board-wrap" }, boardEl));
             host.appendChild(api.el("div", { class: "small-note", text: "You are red. Drop into a column to connect four." }));

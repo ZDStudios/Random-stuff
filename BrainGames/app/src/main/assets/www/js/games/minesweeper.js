@@ -10,7 +10,7 @@
 
             var sMines = stat("Mines", MINES + ""), sTime = stat("Time", "0s"), sBest = stat("Best", (api.getBest() || "—") + "");
             host.appendChild(api.el("div", { class: "game-topline" }, [sMines.box, sTime.box, sBest.box]));
-            var cellPx = Math.floor(Math.min((host.clientWidth || 340) - 24, 340) / N);
+            var cellPx = Math.floor(api.space().board / N);
             var boardEl = api.el("div", { class: "cells", style: "grid-template-columns:repeat(" + N + "," + cellPx + "px)" });
             host.appendChild(api.el("div", { class: "board-wrap" }, boardEl));
             var flagBtn = api.el("button", { class: "btn", html: "&#128681; Flag: OFF", onclick: function () { flagMode = !flagMode; flagBtn.innerHTML = "&#128681; Flag: " + (flagMode ? "ON" : "OFF"); flagBtn.classList.toggle("primary", flagMode); api.sound.click(); } });

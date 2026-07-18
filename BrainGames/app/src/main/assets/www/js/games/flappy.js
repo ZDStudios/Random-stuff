@@ -5,7 +5,7 @@
         gradient: "linear-gradient(135deg,#0EA5E9,#22C55E)",
         best: "high",
         mount: function (host, api) {
-            var W = Math.min((host.clientWidth || 340) - 24, 340), H = Math.round(W * 1.3);
+            var sp = api.space(), W = Math.round(Math.min(sp.w, sp.h / 1.3, 420)), H = Math.round(W * 1.3);
             var bird, pipes, score, over, started, raf, grav, jump, gap, pipeW, speed, spawnX;
 
             var sScore = stat("Score", "0"), sBest = stat("Best", (api.getBest() || 0) + "");

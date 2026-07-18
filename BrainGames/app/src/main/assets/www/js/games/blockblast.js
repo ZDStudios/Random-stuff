@@ -21,7 +21,7 @@
             var sScore = stat("Score", "0"), sBest = stat("Best", (api.getBest() || 0) + "");
             host.appendChild(api.el("div", { class: "game-topline" }, [sScore.box, sBest.box]));
 
-            var cellPx = Math.floor(Math.min((host.clientWidth || 340) - 24, 340) / N);
+            var cellPx = Math.floor(api.space().board / N);
             var boardEl = api.el("div", { class: "cells", style: "grid-template-columns:repeat(" + N + "," + cellPx + "px)" });
             var wrap = api.el("div", { class: "board-wrap" }, boardEl);
             host.appendChild(wrap);

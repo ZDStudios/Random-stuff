@@ -9,7 +9,7 @@
 
             var sMoves = stat("Moves", "0"), sBest = stat("Best", (api.getBest() || "—") + "");
             host.appendChild(api.el("div", { class: "game-topline" }, [sMoves.box, sBest.box]));
-            var size = Math.min((host.clientWidth || 340) - 24, 320);
+            var size = Math.min(api.space().board, 380);
             var gap = 8, cellPx = Math.floor((size - gap * (N + 1)) / N);
             var boardEl = api.el("div", { style: "position:relative;width:" + (cellPx * N + gap * (N + 1)) + "px;height:" + (cellPx * N + gap * (N + 1)) + "px;background:var(--card-2);border-radius:12px" });
             host.appendChild(api.el("div", { class: "board-wrap" }, boardEl));
